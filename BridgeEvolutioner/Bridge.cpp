@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <queue>
 
 #include "Bridge.h"
 
@@ -66,4 +67,17 @@ void Bridge::remove_member(Member& member)
     joint_member_list[member.first].remove(member);
     joint_member_list[member.second].remove(member);
     members.remove(member);
+}
+
+bool Bridge::stable_determinate()
+{
+    int unknowns = 4 + members.size();
+    int equations = 2 * joints.size();
+    return unknowns == equations;
+}
+
+double Bridge::deflection()
+{
+    std::queue<Joint> joint_list;
+    return 2;
 }

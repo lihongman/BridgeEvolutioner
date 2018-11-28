@@ -17,8 +17,7 @@ private:
     void remove_member(Member&);
     bool remove_joint(Joint&);
 public:
-    bool stable();
-    bool determinate();
+    bool stable_determinate();
     double deflection();
     void mutate();
     bool add_member(Member&);
