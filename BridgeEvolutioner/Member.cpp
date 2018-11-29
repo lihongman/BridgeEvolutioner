@@ -14,6 +14,12 @@ bool Member::check_intercept(const Member& member)
     else if (p1.x == p2.x && q1.x > p1.x) { return false; }
     else if (p1.x == p2.x) { return true; }
 
+    if (q1.x == q2.x && p1.y < q1.y && p2.y < q1.y && p1.y < q2.y && p2.y < q2.y) { return false; }
+    else if (q1.x == q2.x && p1.y > q1.y && p2.y > q1.y && p1.y > q2.y && p2.y > q2.y) { return false; }
+    else if (q1.x == q2.x && p2.x < q1.x) { return false; }
+    else if (q1.x == q2.x && p1.x > q1.x) { return false; }
+    else if (q1.x == q2.x) { return true; }
+
     double slopep = (p1.y - p2.y) / (p1.x - p2.x);
     double constantp = p1.y - (slopep * p1.x);
     double slopeq = (q1.y - q2.y) / (q1.x - q2.x);
@@ -35,8 +41,6 @@ bool Member::check_intercept(const Member& member)
         }
     }
     return false;
-    //if (q1.x > p2.x || p1.x > q2.x) { return false; }
-
 }
 
 bool operator==(const Member& m1, const Member& m2)

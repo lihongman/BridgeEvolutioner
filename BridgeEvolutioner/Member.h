@@ -6,6 +6,8 @@
 struct Member {
     Joint first, second;
     double force = 0;
+    //false = tension, true = compression
+    bool force_type = false;
     bool calculated = false;
 
     bool check_intercept(const Member&);

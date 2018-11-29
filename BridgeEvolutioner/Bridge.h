@@ -12,13 +12,13 @@ class Bridge {
 private:
     std::list<Member> members;
     std::list<Joint> joints;
-    std::unordered_map<Joint, std::list<Member>, JointHash> joint_member_list;
+    std::unordered_map<Joint, std::list<Member*>, JointHash> joint_member_list;
 
     void remove_member(Member&);
     bool remove_joint(Joint&);
 public:
     bool stable_determinate();
-    double deflection();
+    double deflection(int version);
     void mutate();
     bool add_member(Member&);
     bool add_joint(Joint&);

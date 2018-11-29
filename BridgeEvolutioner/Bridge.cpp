@@ -33,7 +33,7 @@ bool Bridge::add_member(Member& member)
     if (it == members.end())
     {
         members.push_back(member);
-        joint_member_list[member.first].push_back(member);
+        joint_member_list[member.first].push_back(members);
         joint_member_list[member.second].push_back(member);
         return true;
     }
@@ -71,13 +71,23 @@ void Bridge::remove_member(Member& member)
 
 bool Bridge::stable_determinate()
 {
-    int unknowns = 4 + members.size();
+    int unknowns = 3 + members.size();
     int equations = 2 * joints.size();
     return unknowns == equations;
 }
 
-double Bridge::deflection()
+void method_of_joints_optimize()
 {
     std::queue<Joint> joint_list;
+}
+
+double Bridge::deflection(int version)
+{
+    switch (version)
+    {
+        case 1:
+            method_of_joints_optimize();
+            break;
+    }
     return 2;
 }
