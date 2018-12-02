@@ -6,6 +6,20 @@ Member::Member(const Member& m)
     second = m.second;
 }
 
+void Member::set_force(double f)
+{
+    force = f;
+    if (first->x == second->x)
+    {
+        forcey = f;
+        forcex = 0;
+        return;
+    }
+    double angle = atan2(abs(first->y - second->y), abs(first->x - second->x));
+    forcex = force * cos(angle);
+    forcey = force * sin(angle);
+}
+
 bool Member::check_intercept(const Member& member)
 {
     Joint p1, p2, q1, q2;

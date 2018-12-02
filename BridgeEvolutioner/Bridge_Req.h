@@ -16,12 +16,17 @@ const double L1_LOAD = 1400;
 const double L2_LOAD = 900;
 const double LAT_LOAD = 75;
 
+/*TODO: Need to add correct values when calculated*/
+const double REACTION_0 = 40;
+const double REACTION_1 = 40;
+
 const std::array<Joint, 3> req_side_joints = {
     Joint(0,0),
     Joint(0,42),
     Joint(0,246)
 };
 
+/*TODO: Need to add correct values for reaction forces when calculated*/
 const std::array<std::array<int, 3>, 6> load_locations = {
     std::array<int, 3>{132, 72, 138},
     std::array<int, 3>{144, 96, 138},

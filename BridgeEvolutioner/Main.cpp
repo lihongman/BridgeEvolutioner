@@ -7,23 +7,35 @@
 
 int main()
 {
-    Joint p1 = Joint(0, 0);
-    Joint p2 = Joint(5, 0);
-    Joint p3 = Joint(0, 2);
-    //Joint p4 = Joint(3, 4);
+    Joint A = Joint(0, 0);
+    Joint B = Joint(4, 5);
+    Joint C = Joint(4, 0);
+    Joint D = Joint(8, 4);
+    Joint E = Joint(8, 0);
+    Joint F = Joint(11, 0);
 
     std::shared_ptr<Bridge> bridge = std::make_shared<Bridge>();
 
-    bridge->add_joint(p1);
-    bridge->add_joint(p2);
-    bridge->add_joint(p3);
+    bridge->add_joint(A);
+    bridge->add_joint(B);
+    bridge->add_joint(C);
+    bridge->add_joint(D);
+    bridge->add_joint(E);
+    bridge->add_joint(F);
 
-    bridge->add_member(p1, p2);
-    bridge->add_member(p2, p3);
-    bridge->add_member(p1, p3);
-    //bridge->add_member(p2, p1);
+    bridge->add_member(A, B);
+    bridge->add_member(A, C);
+    bridge->add_member(B, C);
+    bridge->add_member(B, D);
+    bridge->add_member(C, D);
+    bridge->add_member(C, E);
+    bridge->add_member(D, E);
+    bridge->add_member(D, F);
+    bridge->add_member(E, F);
 
-    if (bridge->add_member(p2, p1))
+    bridge->vertical_deflection();
+
+    if (bridge->add_member(B, C))
     {
         std::cout << "Success" << std::endl;
     }
@@ -33,6 +45,11 @@ int main()
     }
 
     bridge.reset();
+
+    std::shared_ptr<Joint> j1 = std::make_shared<Joint>(0, 0);
+    std::shared_ptr<Joint> j2 = std::make_shared<Joint>(-3, 5);
+    Member temp = Member(j1, j2);
+    temp.set_force(50);
 
     _CrtDumpMemoryLeaks();
     std::cin.get();
