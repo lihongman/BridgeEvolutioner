@@ -1,12 +1,18 @@
 #include "Member.h"
 
+Member::Member(const Member& m)
+{
+    first = m.first;
+    second = m.second;
+}
+
 bool Member::check_intercept(const Member& member)
 {
     Joint p1, p2, q1, q2;
-    if (first.x > second.x) { p1 = second; p2 = first; }
-    else { p1 = first; p2 = second; }
-    if (member.first.x > member.second.x) { q1 = member.second; q2 = member.first; }
-    else { q1 = member.first; q2 = member.second; }
+    if (first->x > second->x) { p1 = *second; p2 = *first; }
+    else { p1 = *first; p2 = *second; }
+    if (member.first->x > member.second->x) { q1 = *member.second; q2 = *member.first; }
+    else { q1 = *member.first; q2 = *member.second; }
 
     if (p1.x == p2.x && q1.y < p1.y && q2.y < p1.y && q1.y < p2.y && q2.y < p2.y) { return false; }
     else if (p1.x == p2.x && q1.y > p1.y && q2.y > p1.y && q1.y > p2.y && q2.y > p2.y) { return false; }
@@ -45,5 +51,5 @@ bool Member::check_intercept(const Member& member)
 
 bool operator==(const Member& m1, const Member& m2)
 {
-    return (m1.first == m2.first) && (m1.second == m2.second);
+    return (*(m1.first) == *(m2.first)) && (*(m1.second) == *(m2.second));
 }

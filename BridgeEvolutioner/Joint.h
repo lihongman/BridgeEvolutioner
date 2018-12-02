@@ -3,6 +3,7 @@
 
 struct Joint {
     double x, y, load;
+    bool calculated = false;
     bool check(double min_x, double max_x, double min_y, double max_y);
 
     friend bool operator==(const Joint&, const Joint&);
