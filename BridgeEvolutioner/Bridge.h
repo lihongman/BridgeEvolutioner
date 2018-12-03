@@ -26,7 +26,8 @@ private:
 public:
     bool stable_determinate();
     double vertical_deflection();
-    void mutate();
+    double weight();
+    void mutate(std::shared_ptr<Bridge>);
     bool add_member(Joint&, Joint&);
     bool add_joint(Joint&);
 

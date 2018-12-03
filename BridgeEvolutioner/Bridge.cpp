@@ -2,6 +2,9 @@
 #include <queue>
 #include <memory>
 #include <vector>
+#include <random>
+#include <cmath>
+#include <ctime>
 
 #include "Bridge.h"
 
@@ -10,6 +13,16 @@ Bridge::~Bridge()
     members.clear();
     joints.clear();
     joint_member_list.clear();
+}
+
+double Bridge::weight()
+{
+    double output = 0;
+    for (std::shared_ptr<Member> member : members)
+    {
+        output += member->length() * MATERIAL_WEIGHT;
+    }
+    return output * 2;
 }
 
 bool Bridge::add_joint(Joint& joint)
@@ -152,6 +165,10 @@ void add_vertical_loads(std::list<std::shared_ptr<Joint>> joints, int loading, b
     for (std::shared_ptr<Joint> joint : joints)
     {
         double distance = joint->x - last_joint->x;
+        if (joint->x == load_locations[abs(loading) - 1][0])
+            joint->load = L1;
+        if (joint->x == load_locations[abs(loading) - 1][1])
+            joint->load = L2;
         if (last_joint->x < load_locations[abs(loading)-1][0] && joint->x > load_locations[abs(loading)-1][0])
         {
             double load = L1 * (load_locations[abs(loading)-1][0] - last_joint->x) / distance;
@@ -302,6 +319,7 @@ void Bridge::reset_bridge_load()
     for (std::shared_ptr<Joint> joint : joints)
     {
         joint->calculated = false;
+        joint->load = 0;
     }
     for (std::shared_ptr<Member> member : members)
     {
@@ -311,37 +329,112 @@ void Bridge::reset_bridge_load()
 
 double Bridge::vertical_deflection()
 {
-    int i = 0;
-    //Gets first 
-    add_vertical_loads(joints, -1, true);
-    method_of_joints();
-    for (std::shared_ptr<Member> member : members)
-    {
-        unit_members.push_back(*member);
-        if (unit_members[i].force_type)
-            unit_members[i].force *= 1;
-        i++;
-    }
+    double output;
+    double max = 0;
     reset_bridge_load();
-    i = 0;
-    add_vertical_loads(joints, -1, false);
-    method_of_joints();
-    for (std::shared_ptr<Member> member : members)
+    for (unsigned int j = 1; j < load_locations.size() + 1; j++)
     {
-        if (member->force_type)
-            member->force *= -1;
-        unit_members[i].force += member->force;
-        i++;
+        int i = 0;
+        output = 0;
+        //Gets first 
+        add_vertical_loads(joints, -1 * j, true);
+        method_of_joints();
+        for (std::shared_ptr<Member> member : members)
+        {
+            unit_members.push_back(*member);
+            if (unit_members[i].force_type)
+                unit_members[i].force *= 1;
+            i++;
+        }
+        reset_bridge_load();
+        i = 0;
+        add_vertical_loads(joints, -1 * j, false);
+        method_of_joints();
+        for (std::shared_ptr<Member> member : members)
+        {
+            if (member->force_type)
+                member->force *= -1;
+            unit_members[i].force += member->force;
+            i++;
+        }
+        reset_bridge_load();
+        i = 0;
+        add_vertical_loads(joints, j, false);
+        method_of_joints();
+        for (std::shared_ptr<Member> member : members)
+        {
+            output += (unit_members[i].force * (member->force / 1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
+            i++;
+        }
+        if (max < output)
+        {
+            max = output;
+        }
     }
-    reset_bridge_load();
-    i = 0;
-    add_vertical_loads(joints, 1, false);
-    method_of_joints();
-    double output = 0;
-    for (std::shared_ptr<Member> member : members)
+    unit_members.clear();
+    return max;
+}
+
+void Bridge::mutate(std::shared_ptr<Bridge> bridge)
+{
+    members.clear();
+    joints.clear();
+    joint_member_list.clear();
+    for (std::shared_ptr<Joint> joint : bridge->joints)
     {
-        output += (unit_members[i].force * (member->force / 1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
-        i++;
+        add_joint(*joint);
     }
-    return output;
+    for (std::shared_ptr<Member> member : bridge->members)
+    {
+        add_member(*member->first, *member->second);
+    }
+    bool valid = true;
+    std::default_random_engine generator;
+    std::normal_distribution<double> distribution(0, 0.5);
+    generator.seed(time(NULL));
+    for (std::shared_ptr<Joint> joint : joints)
+    {
+        bool required = false;
+        std::list<std::shared_ptr<Member>> temp_list = joint_member_list[*joint];
+        joint_member_list.erase(*joint);
+        for (Joint rjoint : req_side_joints)
+        {
+            if (rjoint == *joint)
+            {
+                required = true;
+                break;
+            }
+        }
+        if (!required)
+        {
+            do {
+                required = false;
+                double modifyx = distribution(generator) / 2;
+                double modifyy = distribution(generator) / 2;
+                modifyx = floor((modifyx * 2) + 0.5) / 2;
+                modifyy = floor((modifyy * 2) + 0.5) / 2;
+                if (joint->y == 0)
+                {
+                    joint->x += modifyx;
+                }
+                else
+                {
+                    joint->x += modifyx;
+                    joint->y += modifyy;
+                    if (joint->y == 0)
+                        joint->y += 0.5;
+                }
+                for (Joint rjoint : req_side_joints)
+                {
+                    if (rjoint == *joint)
+                    {
+                        required = true;
+                        break;
+                    }
+                }
+
+            } while (required);
+        }
+        joint_member_list[*joint] = temp_list;
+    }
 }

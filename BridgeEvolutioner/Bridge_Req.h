@@ -18,12 +18,12 @@ const double LAT_LOAD = 75;
 
 const double YOUNGS_MODULUS = 30000;
 const double MEMBER_AREA = 0.2431;
-
+const double MATERIAL_WEIGHT = 0.069;
 
 const std::array<Joint, 3> req_side_joints = {
     Joint(0,0),
-    Joint(0,42),
-    Joint(0,246)
+    Joint(42,0),
+    Joint(276,0)
 };
 
 const std::array<std::array<int, 3>, 6> load_locations = {

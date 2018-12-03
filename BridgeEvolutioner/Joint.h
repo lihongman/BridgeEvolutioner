@@ -11,6 +11,7 @@ struct Joint {
     Joint(double x, double y) : x(x), y(y), load(0) { };
     Joint(double x, double y, double load) : x(x), y(y), load(load) { };
     Joint() : x(0), y(0), load(0) { };
+    Joint(const Joint&);
     ~Joint() { };
 };
 

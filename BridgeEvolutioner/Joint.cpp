@@ -2,6 +2,13 @@
 
 #include "Joint.h"
 
+Joint::Joint(const Joint& j)
+{
+    x = j.x;
+    y = j.y;
+    load = j.load;
+}
+
 bool Joint::check(double min_x, double max_x, double min_y, double max_y)
 {
     return (x >= min_x) && (x <= max_x) && (y >= min_y) && (y <= max_y);

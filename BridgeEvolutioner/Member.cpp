@@ -41,13 +41,13 @@ bool Member::check_intercept(const Member& member)
     if (member.first->x > member.second->x) { q1 = *member.second; q2 = *member.first; }
     else { q1 = *member.first; q2 = *member.second; }
 
-    if (p1.x == p2.x && q1.y < p1.y && q2.y < p1.y && q1.y < p2.y && q2.y < p2.y) { return false; }
+    if (p1.x == p2.x && q1.y <= p1.y && q2.y <= p1.y && q1.y <= p2.y && q2.y <= p2.y) { return false; }
     else if (p1.x == p2.x && q1.y > p1.y && q2.y > p1.y && q1.y > p2.y && q2.y > p2.y) { return false; }
     else if (p1.x == p2.x && q2.x < p1.x) { return false; }
     else if (p1.x == p2.x && q1.x > p1.x) { return false; }
     else if (p1.x == p2.x) { return true; }
 
-    if (q1.x == q2.x && p1.y < q1.y && p2.y < q1.y && p1.y < q2.y && p2.y < q2.y) { return false; }
+    if (q1.x == q2.x && p1.y <= q1.y && p2.y <= q1.y && p1.y <= q2.y && p2.y <= q2.y) { return false; }
     else if (q1.x == q2.x && p1.y > q1.y && p2.y > q1.y && p1.y > q2.y && p2.y > q2.y) { return false; }
     else if (q1.x == q2.x && p2.x < q1.x) { return false; }
     else if (q1.x == q2.x && p1.x > q1.x) { return false; }
