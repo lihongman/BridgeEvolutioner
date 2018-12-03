@@ -12,13 +12,13 @@ const double MAX_LENGTH = 276;
 const double MIN_HEIGHT = 0;
 const double MAX_HEIGHT = 52.5;
 
-const double L1_LOAD = 1400;
-const double L2_LOAD = 900;
+const double L1_LOAD = 1400/2;
+const double L2_LOAD = 900/2;
 const double LAT_LOAD = 75;
 
-/*TODO: Need to add correct values when calculated*/
-const double REACTION_0 = 40;
-const double REACTION_1 = 40;
+const double YOUNGS_MODULUS = 30000;
+const double MEMBER_AREA = 0.2431;
+
 
 const std::array<Joint, 3> req_side_joints = {
     Joint(0,0),
@@ -26,7 +26,6 @@ const std::array<Joint, 3> req_side_joints = {
     Joint(0,246)
 };
 
-/*TODO: Need to add correct values for reaction forces when calculated*/
 const std::array<std::array<int, 3>, 6> load_locations = {
     std::array<int, 3>{132, 72, 138},
     std::array<int, 3>{144, 96, 138},

@@ -18,7 +18,7 @@ bool Bridge::add_joint(Joint& joint)
     {
         if (joints.size() == 0)
         {
-            start = std::make_shared<Joint>(joint.x, joint.y);
+            start = std::make_shared<Joint>(joint.x, joint.y, joint.load);
             joints.push_back(start);
             return true;
         }
@@ -26,7 +26,7 @@ bool Bridge::add_joint(Joint& joint)
             [joint](std::shared_ptr<Joint> const& j) { return *j == joint; });
         if (it == joints.end())
         {
-            joints.push_back(std::make_shared<Joint>(joint.x, joint.y));
+            joints.push_back(std::make_shared<Joint>(joint.x, joint.y, joint.load));
             return true;
         }
     }
@@ -102,46 +102,133 @@ bool Bridge::stable_determinate()
     return unknowns == equations;
 }
 
-void add_vertical_loads()
+void add_vertical_loads(std::list<std::shared_ptr<Joint>> joints, int loading, bool side)
 {
+    Joint temp = Joint(MIN_LENGTH, 0);
+    std::list<std::shared_ptr<Joint>>::iterator itstart = std::find_if(joints.begin(), joints.end(),
+        [temp](std::shared_ptr<Joint> const& j) { return *j == temp; });
+    temp = Joint(MAX_LENGTH, 0);
+    std::list<std::shared_ptr<Joint>>::iterator itend = std::find_if(joints.begin(), joints.end(),
+        [temp](std::shared_ptr<Joint> const& j) { return *j == temp; });
+    std::shared_ptr<Joint> start = *itstart;
+    std::shared_ptr<Joint> end = *itend;
 
+    double L1, L2;
+
+    if (loading < 0)
+    {
+        if (side)
+        {
+            L1 = 1;
+            L2 = 0;
+        }
+        else
+        {
+            L2 = 1;
+            L1 = 0;
+        }
+    }
+    else
+    {
+        L1 = L1_LOAD;
+        L2 = L2_LOAD;
+    }
+
+    end->load = -(L1 * load_locations[abs(loading)-1][0] + L2 * load_locations[abs(loading)-1][1]) / MAX_LENGTH;
+    start->load = -(L1 + L2) - end->load;
+    std::shared_ptr<Joint> last_joint = start;
+    std::vector<std::shared_ptr<Joint>> list;
+    for (std::shared_ptr<Joint> joint : joints)
+    {
+        if (last_joint->y == 0 && joint->y == 0)
+        {
+            list.push_back(joint);
+        }
+    }
+    std::sort(list.begin(), list.end(), [](std::shared_ptr<Joint> a, std::shared_ptr<Joint> b)
+    {
+        return a->x < b->x;
+    });
+    for (std::shared_ptr<Joint> joint : joints)
+    {
+        double distance = joint->x - last_joint->x;
+        if (last_joint->x < load_locations[abs(loading)-1][0] && joint->x > load_locations[abs(loading)-1][0])
+        {
+            double load = L1 * (load_locations[abs(loading)-1][0] - last_joint->x) / distance;
+            double oload = L1 - load;
+            last_joint->load = load;
+            joint->load = oload;
+        }
+        if (last_joint->x < load_locations[abs(loading)-1][1] && joint->x > load_locations[abs(loading)-1][1])
+        {
+            double load = L2 * (load_locations[abs(loading)-1][1] - last_joint->x) / distance;
+            double oload = L2 - load;
+            last_joint->load = load;
+            joint->load = oload;
+        }
+        last_joint = joint;
+    }
 }
 
 double solve_member(double forcex, double forcey, const Member& m1, const Member& m2, const Joint& joint)
 {
     Joint j1;
     Joint j2;
-    if (*m1.first == joint) { j1 = *m1.second; } else { j1 = *m1.first; }
-    if (*m2.first == joint) { j2 = *m2.second; } else { j2 = *m2.first; }
+    if (*m1.first == joint) { j1 = *m1.second; }
+    else { j1 = *m1.first; }
+    if (*m2.first == joint) { j2 = *m2.second; }
+    else { j2 = *m2.first; }
 
-    return 0;
+    double angle1 = atan2(j1.y - joint.y, j1.x - joint.x);
+    double angle2 = atan2(j2.y - joint.y, j2.x - joint.x);
+
+    return (-forcex * sin(angle1) + forcey * cos(angle1)) / ((sin(angle2) * cos(angle1)) - (sin(angle1) * cos(angle2)));
 }
 
 void calculate_joint(const Joint& joint, std::list<std::shared_ptr<Member>>& member_list)
 {
     double forcex = 0;
-    double forcey = joint.reaction - joint.load;
+    double forcey = -joint.load;
     std::vector<std::shared_ptr<Member>> temp;
     for (std::shared_ptr<Member> member : member_list)
     {
         if (member->calculated)
         {
-            Joint first;
             Joint second;
             if (*member->first == joint)
             {
-                first = *member->first;
                 second = *member->second;
             }
             else
             {
                 second = *member->first;
-                first = *member->second;
             }
-            if (first.x < second.x) { forcex -= member->forcex; }
-            else { forcex += member->forcex; }
-            if (first.y < second.y) { forcey -= member->forcey; }
-            else { forcey += member->forcey; }
+            if (joint.x < second.x) { 
+                if (member->force_type)
+                    forcex -= member->forcex;
+                else
+                    forcex += member->forcex;
+            }
+            else 
+            { 
+                if (member->force_type)
+                    forcex += member->forcex;
+                else
+                    forcex -= member->forcex;
+            }
+            if (joint.y < second.y) {
+                if (member->force_type)
+                    forcey -= member->forcey;
+                else
+                    forcey += member->forcey;
+            }
+            else
+            {
+                if (member->force_type)
+                    forcey += member->forcey;
+                else
+                    forcey -= member->forcey;
+            }
         }
         else
         {
@@ -159,6 +246,14 @@ void calculate_joint(const Joint& joint, std::list<std::shared_ptr<Member>>& mem
         temp[0]->force = sqrt(pow(forcex, 2) + pow(forcey, 2));
         temp[0]->forcex = abs(forcex);
         temp[0]->forcey = abs(forcey);
+        if (forcex > 0 || forcey > 0)
+        {
+            temp[0]->force_type = true;
+        }
+        else
+        {
+            temp[0]->force_type = false;
+        }
     }
 }
 
@@ -202,9 +297,51 @@ void Bridge::method_of_joints()
     }
 }
 
+void Bridge::reset_bridge_load()
+{
+    for (std::shared_ptr<Joint> joint : joints)
+    {
+        joint->calculated = false;
+    }
+    for (std::shared_ptr<Member> member : members)
+    {
+        member->calculated = false;
+    }
+}
+
 double Bridge::vertical_deflection()
 {
-    add_vertical_loads();
+    int i = 0;
+    //Gets first 
+    add_vertical_loads(joints, -1, true);
     method_of_joints();
-    return 2;
+    for (std::shared_ptr<Member> member : members)
+    {
+        unit_members.push_back(*member);
+        if (unit_members[i].force_type)
+            unit_members[i].force *= 1;
+        i++;
+    }
+    reset_bridge_load();
+    i = 0;
+    add_vertical_loads(joints, -1, false);
+    method_of_joints();
+    for (std::shared_ptr<Member> member : members)
+    {
+        if (member->force_type)
+            member->force *= -1;
+        unit_members[i].force += member->force;
+        i++;
+    }
+    reset_bridge_load();
+    i = 0;
+    add_vertical_loads(joints, 1, false);
+    method_of_joints();
+    double output = 0;
+    for (std::shared_ptr<Member> member : members)
+    {
+        output += (unit_members[i].force * (member->force / 1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
+        i++;
+    }
+    return output;
 }

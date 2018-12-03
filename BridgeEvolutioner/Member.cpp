@@ -6,12 +6,25 @@ Member::Member(const Member& m)
     second = m.second;
 }
 
+double Member::length()
+{
+    return sqrt(pow(first->x - second->x, 2) + pow(first->y - second->y, 2));
+}
+
 void Member::set_force(double f)
 {
-    force = f;
+    if (f < 0)
+    {
+        force_type = false;
+    }
+    else
+    {
+        force_type = true;
+    }
+    force = abs(f);
     if (first->x == second->x)
     {
-        forcey = f;
+        forcey = force;
         forcex = 0;
         return;
     }
