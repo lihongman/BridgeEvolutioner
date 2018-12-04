@@ -2,9 +2,9 @@
 #include <queue>
 #include <memory>
 #include <vector>
-#include <random>
 #include <cmath>
 #include <ctime>
+#include <sstream>
 
 #include "Bridge.h"
 
@@ -40,6 +40,8 @@ bool Bridge::add_joint(Joint& joint)
         if (it == joints.end())
         {
             joints.push_back(std::make_shared<Joint>(joint.x, joint.y, joint.load));
+            if (joint == Joint(MAX_LENGTH, 0))
+                end = joints.back();
             return true;
         }
     }
@@ -115,17 +117,8 @@ bool Bridge::stable_determinate()
     return unknowns == equations;
 }
 
-void add_vertical_loads(std::list<std::shared_ptr<Joint>> joints, int loading, bool side)
+void Bridge::add_vertical_loads(int loading, bool side)
 {
-    Joint temp = Joint(MIN_LENGTH, 0);
-    std::list<std::shared_ptr<Joint>>::iterator itstart = std::find_if(joints.begin(), joints.end(),
-        [temp](std::shared_ptr<Joint> const& j) { return *j == temp; });
-    temp = Joint(MAX_LENGTH, 0);
-    std::list<std::shared_ptr<Joint>>::iterator itend = std::find_if(joints.begin(), joints.end(),
-        [temp](std::shared_ptr<Joint> const& j) { return *j == temp; });
-    std::shared_ptr<Joint> start = *itstart;
-    std::shared_ptr<Joint> end = *itend;
-
     double L1, L2;
 
     if (loading < 0)
@@ -337,7 +330,7 @@ double Bridge::vertical_deflection()
         int i = 0;
         output = 0;
         //Gets first 
-        add_vertical_loads(joints, -1 * j, true);
+        add_vertical_loads(-1 * j, true);
         method_of_joints();
         for (std::shared_ptr<Member> member : members)
         {
@@ -348,7 +341,7 @@ double Bridge::vertical_deflection()
         }
         reset_bridge_load();
         i = 0;
-        add_vertical_loads(joints, -1 * j, false);
+        add_vertical_loads(-1 * j, false);
         method_of_joints();
         for (std::shared_ptr<Member> member : members)
         {
@@ -359,7 +352,7 @@ double Bridge::vertical_deflection()
         }
         reset_bridge_load();
         i = 0;
-        add_vertical_loads(joints, j, false);
+        add_vertical_loads(j, false);
         method_of_joints();
         for (std::shared_ptr<Member> member : members)
         {
@@ -372,11 +365,14 @@ double Bridge::vertical_deflection()
         }
     }
     unit_members.clear();
+    deflection = max;
     return max;
 }
 
 void Bridge::mutate(std::shared_ptr<Bridge> bridge)
 {
+    start = nullptr;
+    end = nullptr;
     members.clear();
     joints.clear();
     joint_member_list.clear();
@@ -389,9 +385,9 @@ void Bridge::mutate(std::shared_ptr<Bridge> bridge)
         add_member(*member->first, *member->second);
     }
     bool valid = true;
-    std::default_random_engine generator;
+
     std::normal_distribution<double> distribution(0, 0.5);
-    generator.seed(time(NULL));
+
     for (std::shared_ptr<Joint> joint : joints)
     {
         bool required = false;
@@ -433,8 +429,46 @@ void Bridge::mutate(std::shared_ptr<Bridge> bridge)
                     }
                 }
 
-            } while (required);
+            } while (required && joint_member_list.find(*joint) != joint_member_list.end());
         }
         joint_member_list[*joint] = temp_list;
     }
+}
+
+bool Bridge::validate()
+{
+    for (std::shared_ptr<Joint> joint : joints)
+    {
+        if (!joint->check(MIN_LENGTH, MAX_LENGTH, MIN_HEIGHT, MAX_HEIGHT))
+        {
+            return false;
+        }
+    }
+    for (std::shared_ptr<Member> member : members)
+    {
+        for (std::shared_ptr<Member> amember : members)
+        {
+            if (member->check_intercept(*amember) && !(*member == *amember))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+std::string Bridge::print()
+{
+    std::stringstream stream;
+    stream << "Joints\n\n";
+    for (std::shared_ptr<Joint> joint : joints)
+    {
+        stream << '(' << joint->x << ',' << joint->y << ")\n";
+    }
+    stream << "\n\n\nMembers\n";
+    for (std::shared_ptr<Member> member : members)
+    {
+        stream << '(' << member->first->x << ',' << member->first->y << ") , " << '(' << member->first->x << ',' << member->first->y << ")\n";
+    }
+    return stream.str();
 }
