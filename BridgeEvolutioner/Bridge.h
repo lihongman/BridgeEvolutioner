@@ -14,26 +14,27 @@
 
 class Bridge {
 private:
-    std::shared_ptr<Joint> start;
-    std::shared_ptr<Joint> end;
     std::list<std::shared_ptr<Member>> members;
-    std::list<std::shared_ptr<Joint>> joints;
+    //std::list<std::shared_ptr<Joint>> joints;
     std::unordered_map<Joint, std::list<std::shared_ptr<Member>>, JointHash> joint_member_list;
     std::default_random_engine generator;
 
-    std::vector<Member> unit_members;
+    std::vector<double> unit_members1;
+    std::vector<double> unit_members2;
 
     void reset_bridge_load();
-    void method_of_joints();
+    bool method_of_joints();
     void remove_member(Joint&, Joint&);
     bool remove_joint(Joint&);
     void add_vertical_loads(int, bool);
 public:
-    double fitness = 0;
-    double deflection = 0;
+    long double fitness = 0;
+    long double deflection = 0;
 
+    std::list<std::shared_ptr<Joint>> joints;
+    
     bool stable_determinate();
-    double vertical_deflection();
+    long double vertical_deflection();
     double weight();
     void mutate(std::shared_ptr<Bridge>);
     bool validate();

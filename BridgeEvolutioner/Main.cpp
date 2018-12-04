@@ -4,16 +4,17 @@
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <thread>
 
 #include "Bridge.h"
 
 #include <stdlib.h>  
 #include <crtdbg.h>
 
-std::vector<double> best_deflection_gen;
-std::vector<double> best_fitness_gen;
-std::vector<double> average_deflection_gen;
-std::vector<double> average_fitness_gen;
+std::vector<long double> best_deflection_gen;
+std::vector<long double> best_fitness_gen;
+std::vector<long double> average_deflection_gen;
+std::vector<long double> average_fitness_gen;
 std::shared_ptr<Bridge> best_bridge;
 int generations;
 
@@ -21,10 +22,16 @@ double fitness_equation(const std::shared_ptr<Bridge>& bridge)
 {
     if (!bridge->validate())
     {
+        bridge->deflection = 5;
         return 100000000;
     }
     double weight = bridge->weight();
-    double deflection = bridge->vertical_deflection();
+    long double deflection = bridge->vertical_deflection();
+    if (deflection < 0)
+    {
+        bridge->deflection = 5;
+        return 100000000;
+    }
     double cost = 0;
 
     if (weight < 120)
@@ -44,20 +51,49 @@ double fitness_equation(const std::shared_ptr<Bridge>& bridge)
     return cost;
 }
 
+void fitness_thread(std::vector<std::shared_ptr<Bridge>>& bridges, int start, int end)
+{
+    for (int i = start; i < end; i++)
+    {
+        bridges[i]->fitness = fitness_equation(bridges[i]);
+    }
+}
+
 void run_generations(std::vector<std::shared_ptr<Bridge>>& bridges)
 {
     for (int i = 0; i < generations; i++)
     {
         std::cout << "Processing Generation " << i+1 << std::endl;
-        for (std::shared_ptr<Bridge> bridge : bridges)
-        {
-            bridge->fitness = fitness_equation(bridge);
-        }
+        std::thread t1(fitness_thread, std::ref(bridges), 0, 12);
+        std::thread t2(fitness_thread, std::ref(bridges), 12, 24);
+        std::thread t3(fitness_thread, std::ref(bridges), 24, 36);
+        std::thread t4(fitness_thread, std::ref(bridges), 36, 48);
+        std::thread t5(fitness_thread, std::ref(bridges), 48, 60);
+        std::thread t6(fitness_thread, std::ref(bridges), 60, 72);
+        std::thread t7(fitness_thread, std::ref(bridges), 72, 86);
+        std::thread t8(fitness_thread, std::ref(bridges), 86, 100);
+        if (t1.joinable())
+            t1.join();
+        if (t2.joinable())
+            t2.join();
+        if (t3.joinable())
+            t3.join();
+        if (t4.joinable())
+            t4.join();
+        if (t5.joinable())
+            t5.join();
+        if (t6.joinable())
+            t6.join();
+        if (t7.joinable())
+            t7.join();
+        if (t8.joinable())
+            t8.join();
+
         std::sort(bridges.begin(), bridges.end(), [](std::shared_ptr<Bridge> b1, std::shared_ptr<Bridge> b2) {
             return b1->fitness < b2->fitness;
         });
 
-        double average_fitness = 0, average_deflection = 0;
+        long double average_fitness = 0, average_deflection = 0;
         for (std::shared_ptr<Bridge> bridge : bridges)
         {
             average_fitness += bridge->fitness;
@@ -70,6 +106,7 @@ void run_generations(std::vector<std::shared_ptr<Bridge>>& bridges)
         best_fitness_gen.push_back(bridges[0]->fitness);
         average_deflection_gen.push_back(average_deflection);
         average_fitness_gen.push_back(average_fitness);
+
 
         int random;
 
@@ -96,6 +133,10 @@ void run_generations(std::vector<std::shared_ptr<Bridge>>& bridges)
         for (int i = 67; i < 100; i++)
         {
             random = rand() % 10;
+            if (bridges[i]->fitness == 100000000)
+            {
+                bridges[i]->mutate(bridges[random]);
+            }
             if (random < 9)
             {
                 random = rand() % 34;
@@ -104,6 +145,59 @@ void run_generations(std::vector<std::shared_ptr<Bridge>>& bridges)
             }
         }
     }
+}void run2()
+{
+    srand((unsigned int)time(NULL));
+    std::vector<std::shared_ptr<Bridge>> bridges;
+    for (unsigned int i = 0; i < 100; i++)
+    {
+        Joint A = Joint(0, 0);
+        Joint B = Joint(21, 50);
+        Joint C = Joint(42, 0);
+        Joint D = Joint(138, 50);
+        Joint E = Joint(138, 0);
+        Joint F = Joint(234, 0);
+        Joint G = Joint(255, 50);
+        Joint H = Joint(276, 0);
+
+        std::shared_ptr<Bridge> bridge = std::make_shared<Bridge>();
+
+        bridge->add_joint(A);
+        bridge->add_joint(B);
+        bridge->add_joint(C);
+        bridge->add_joint(D);
+        //bridge->add_joint(E);
+        bridge->add_joint(F);
+        bridge->add_joint(G);
+        bridge->add_joint(H);
+
+        bridge->add_member(A, B);
+        bridge->add_member(A, C);
+        bridge->add_member(B, C);
+        bridge->add_member(B, D);
+        bridge->add_member(C, D);
+        //bridge->add_member(C, E);
+        //bridge->add_member(D, E);
+        bridge->add_member(D, F);
+        bridge->add_member(D, G);
+        //bridge->add_member(E, F);
+        bridge->add_member(F, G);
+        bridge->add_member(F, H);
+        bridge->add_member(G, H);
+
+        bridges.push_back(bridge);
+    }
+
+    run_generations(bridges);
+
+    best_bridge = bridges[0];
+
+    for (unsigned int i = 1; i < bridges.size(); i++)
+    {
+        bridges[i].reset();
+    }
+
+    bridges.clear();
 }
 
 void run1()
@@ -237,6 +331,9 @@ int main()
     std::cin >> generations;
     switch (i)
     {
+    case 2:
+        run2();
+        break;
     default:
         run1();
     }
@@ -252,18 +349,24 @@ int main()
 
     for (unsigned int i = 0; i < best_fitness_gen.size(); i++)
     {
+        output_file << "Generation " << i+1 << '\n';
         output_file << "BEST\n";
         output_file << "Deflection(in): " << best_deflection_gen[i];
         output_file << "\nFitness value($): " << std::fixed << best_fitness_gen[i];
-        output_file << "\nAVERAGE\n";
+        output_file << "\n\nAVERAGE";
         output_file << "\nDeflection(in): " << average_deflection_gen[i];
         output_file << "\nFitness value($): " << std::fixed << average_fitness_gen[i] << "\n\n\n";
 
-        data_file << i+1 << ',' << best_deflection_gen[i] << ',' << std::fixed << best_fitness_gen[i] / 1000000 << ',' <<
-            average_deflection_gen[i] << ',' << std::fixed << average_fitness_gen[i] / 1000000 << '\n';
+        data_file << i+1 << ',' << best_deflection_gen[i] << ',' << std::fixed << best_fitness_gen[i] << ',' <<
+            average_deflection_gen[i] << ',' << std::fixed << average_fitness_gen[i] << '\n';
     }
 
-    best_bridge_file << best_bridge->print();
+    best_bridge_file << best_bridge->print() << "\n\nWeight: ";
+    best_bridge_file << best_bridge->weight() << "\nDeflection: ";
+    best_bridge_file << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << best_bridge->vertical_deflection();
+
+    std::cout << "\n\nDeflection: " << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << best_bridge->vertical_deflection()
+        << "\n\n";
 
     output_file.close();
     data_file.close();

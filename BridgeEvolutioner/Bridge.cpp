@@ -6,6 +6,8 @@
 #include <ctime>
 #include <sstream>
 
+#include <iostream>
+
 #include "Bridge.h"
 
 Bridge::~Bridge()
@@ -27,23 +29,17 @@ double Bridge::weight()
 
 bool Bridge::add_joint(Joint& joint)
 {
-    if (joint.check(MIN_LENGTH, MAX_LENGTH, MIN_HEIGHT, MAX_HEIGHT))
+    if (joints.size() == 0)
     {
-        if (joints.size() == 0)
-        {
-            start = std::make_shared<Joint>(joint.x, joint.y, joint.load);
-            joints.push_back(start);
-            return true;
-        }
-        std::list<std::shared_ptr<Joint>>::iterator it = std::find_if(joints.begin(), joints.end(),
-            [joint](std::shared_ptr<Joint> const& j) { return *j == joint; });
-        if (it == joints.end())
-        {
-            joints.push_back(std::make_shared<Joint>(joint.x, joint.y, joint.load));
-            if (joint == Joint(MAX_LENGTH, 0))
-                end = joints.back();
-            return true;
-        }
+        joints.push_back(std::make_shared<Joint>(joint.x, joint.y, joint.load));
+        return true;
+    }
+    std::list<std::shared_ptr<Joint>>::iterator it = std::find_if(joints.begin(), joints.end(),
+        [joint](std::shared_ptr<Joint> const& j) { return *j == joint; });
+    if (it == joints.end())
+    {
+        joints.push_back(std::make_shared<Joint>(joint.x, joint.y, joint.load));
+        return true;
     }
     return false;
 }
@@ -140,9 +136,9 @@ void Bridge::add_vertical_loads(int loading, bool side)
         L2 = L2_LOAD;
     }
 
-    end->load = -(L1 * load_locations[abs(loading)-1][0] + L2 * load_locations[abs(loading)-1][1]) / MAX_LENGTH;
-    start->load = -(L1 + L2) - end->load;
-    std::shared_ptr<Joint> last_joint = start;
+    joints.back()->load = -(L1 * load_locations[abs(loading)-1][0] + L2 * load_locations[abs(loading)-1][1]) / MAX_LENGTH;
+    joints.front()->load = -(L1 + L2) - joints.back()->load;
+    std::shared_ptr<Joint> last_joint = joints.front();
     std::vector<std::shared_ptr<Joint>> list;
     for (std::shared_ptr<Joint> joint : joints)
     {
@@ -159,22 +155,22 @@ void Bridge::add_vertical_loads(int loading, bool side)
     {
         double distance = joint->x - last_joint->x;
         if (joint->x == load_locations[abs(loading) - 1][0])
-            joint->load = L1;
+            joint->load += L1;
         if (joint->x == load_locations[abs(loading) - 1][1])
-            joint->load = L2;
+            joint->load += L2;
         if (last_joint->x < load_locations[abs(loading)-1][0] && joint->x > load_locations[abs(loading)-1][0])
         {
             double load = L1 * (load_locations[abs(loading)-1][0] - last_joint->x) / distance;
             double oload = L1 - load;
-            last_joint->load = load;
-            joint->load = oload;
+            last_joint->load += load;
+            joint->load += oload;
         }
         if (last_joint->x < load_locations[abs(loading)-1][1] && joint->x > load_locations[abs(loading)-1][1])
         {
             double load = L2 * (load_locations[abs(loading)-1][1] - last_joint->x) / distance;
             double oload = L2 - load;
-            last_joint->load = load;
-            joint->load = oload;
+            last_joint->load += load;
+            joint->load += oload;
         }
         last_joint = joint;
     }
@@ -267,11 +263,12 @@ void calculate_joint(const Joint& joint, std::list<std::shared_ptr<Member>>& mem
     }
 }
 
-void Bridge::method_of_joints()
+bool Bridge::method_of_joints()
 {
     std::shared_ptr<Joint> temp;
     std::queue<std::shared_ptr<Joint>> jqueue;
-    jqueue.push(start);
+    jqueue.push(joints.front());
+    int iterations = 0;
     while (!jqueue.empty())
     {
         temp = jqueue.front();
@@ -301,10 +298,16 @@ void Bridge::method_of_joints()
             }
             else
             {
+                ++iterations;
+                if (iterations > 1000)
+                {
+                    return false;
+                }
                 jqueue.push(temp);
             }
         }
     }
+    return true;
 }
 
 void Bridge::reset_bridge_load()
@@ -320,10 +323,10 @@ void Bridge::reset_bridge_load()
     }
 }
 
-double Bridge::vertical_deflection()
+long double Bridge::vertical_deflection()
 {
-    double output;
-    double max = 0;
+    long double output;
+    long double max = 0;
     reset_bridge_load();
     for (unsigned int j = 1; j < load_locations.size() + 1; j++)
     {
@@ -334,9 +337,9 @@ double Bridge::vertical_deflection()
         method_of_joints();
         for (std::shared_ptr<Member> member : members)
         {
-            unit_members.push_back(*member);
-            if (unit_members[i].force_type)
-                unit_members[i].force *= 1;
+            unit_members1.push_back(member->force);
+            if (member->force_type)
+                unit_members1[i] *= -1;
             i++;
         }
         reset_bridge_load();
@@ -345,18 +348,20 @@ double Bridge::vertical_deflection()
         method_of_joints();
         for (std::shared_ptr<Member> member : members)
         {
+            unit_members2.push_back(member->force);
             if (member->force_type)
-                member->force *= -1;
-            unit_members[i].force += member->force;
+                unit_members2[i] *= -1;
             i++;
         }
         reset_bridge_load();
         i = 0;
         add_vertical_loads(j, false);
-        method_of_joints();
+        if (!method_of_joints())
+            return -100;
         for (std::shared_ptr<Member> member : members)
         {
-            output += (unit_members[i].force * (member->force / 1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
+            output += (unit_members1[i] * (member->force/1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
+            output += (unit_members2[i] * (member->force / 1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
             i++;
         }
         if (max < output)
@@ -364,21 +369,23 @@ double Bridge::vertical_deflection()
             max = output;
         }
     }
-    unit_members.clear();
+    unit_members1.clear();
+    unit_members2.clear();
+
     deflection = max;
     return max;
 }
 
 void Bridge::mutate(std::shared_ptr<Bridge> bridge)
 {
-    start = nullptr;
-    end = nullptr;
     members.clear();
     joints.clear();
     joint_member_list.clear();
+    int jointed = 0;
     for (std::shared_ptr<Joint> joint : bridge->joints)
     {
         add_joint(*joint);
+        jointed++;
     }
     for (std::shared_ptr<Member> member : bridge->members)
     {
@@ -398,11 +405,11 @@ void Bridge::mutate(std::shared_ptr<Bridge> bridge)
             if (rjoint == *joint)
             {
                 required = true;
-                break;
             }
         }
         if (!required)
         {
+            int count;
             do {
                 required = false;
                 double modifyx = distribution(generator) / 2;
@@ -418,18 +425,25 @@ void Bridge::mutate(std::shared_ptr<Bridge> bridge)
                     joint->x += modifyx;
                     joint->y += modifyy;
                     if (joint->y == 0)
-                        joint->y += 0.5;
+                    {
+                        while (joint->y <= 0)
+                        {
+                            joint->y += 0.5;
+                        }
+                    }
                 }
+
+                count = std::count_if(joints.begin(), joints.end(), [joint](std::shared_ptr<Joint> j) { return *j == *joint; });
+
                 for (Joint rjoint : req_side_joints)
                 {
                     if (rjoint == *joint)
                     {
                         required = true;
-                        break;
                     }
                 }
 
-            } while (required && joint_member_list.find(*joint) != joint_member_list.end());
+            } while (required && count > 1);
         }
         joint_member_list[*joint] = temp_list;
     }
@@ -437,6 +451,14 @@ void Bridge::mutate(std::shared_ptr<Bridge> bridge)
 
 bool Bridge::validate()
 {
+    unsigned int num_joints = joints.size();
+    unsigned int num_members = members.size();
+    std::unique(joints.begin(), joints.end(), [](const std::shared_ptr<Joint>& j1, const std::shared_ptr<Joint>& j2) { return *j1 == *j2; });
+    if (num_joints > joints.size())
+        return false;
+    std::unique(members.begin(), members.end(), [](const std::shared_ptr<Member>& j1, const std::shared_ptr<Member>& j2) { return *j1 == *j2; });
+    if (num_members > members.size())
+        return false;
     for (std::shared_ptr<Joint> joint : joints)
     {
         if (!joint->check(MIN_LENGTH, MAX_LENGTH, MIN_HEIGHT, MAX_HEIGHT))
@@ -446,6 +468,8 @@ bool Bridge::validate()
     }
     for (std::shared_ptr<Member> member : members)
     {
+        if (*member->first == *member->second)
+            return false;
         for (std::shared_ptr<Member> amember : members)
         {
             if (member->check_intercept(*amember) && !(*member == *amember))
@@ -468,7 +492,7 @@ std::string Bridge::print()
     stream << "\n\n\nMembers\n";
     for (std::shared_ptr<Member> member : members)
     {
-        stream << '(' << member->first->x << ',' << member->first->y << ") , " << '(' << member->first->x << ',' << member->first->y << ")\n";
+        stream << '(' << member->first->x << ',' << member->first->y << ") , " << '(' << member->second->x << ',' << member->second->y << ")\n";
     }
     return stream.str();
 }
