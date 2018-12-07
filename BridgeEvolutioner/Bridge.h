@@ -15,7 +15,7 @@
 class Bridge {
 private:
     std::list<std::shared_ptr<Member>> members;
-    //std::list<std::shared_ptr<Joint>> joints;
+    std::list<std::shared_ptr<Joint>> joints;
     std::unordered_map<Joint, std::list<std::shared_ptr<Member>>, JointHash> joint_member_list;
     std::default_random_engine generator;
 
@@ -30,8 +30,6 @@ private:
 public:
     long double fitness = 0;
     long double deflection = 0;
-
-    std::list<std::shared_ptr<Joint>> joints;
     
     bool stable_determinate();
     long double vertical_deflection();

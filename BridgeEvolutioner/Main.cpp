@@ -36,15 +36,15 @@ double fitness_equation(const std::shared_ptr<Bridge>& bridge)
 
     if (weight < 120)
     {
-        cost = deflection * 3250000;
+        cost = deflection * 3250000 * 2;
     }
     else if (weight > 200)
     {
-        cost = ((weight - 184) * 25000) + (deflection * 3250000);
+        cost = ((weight - 184) * 25000) + (deflection * 3250000 * 2);
     }
     else
     {
-        cost = ((weight - 120) * 5000) + (deflection * 3250000);
+        cost = ((weight - 120) * 5000) + (deflection * 3250000 * 2);
     }
     if (deflection > 2)
         cost += 10000000;
@@ -94,13 +94,21 @@ void run_generations(std::vector<std::shared_ptr<Bridge>>& bridges)
         });
 
         long double average_fitness = 0, average_deflection = 0;
+        int killed = 0;
         for (std::shared_ptr<Bridge> bridge : bridges)
         {
-            average_fitness += bridge->fitness;
-            average_deflection += bridge->deflection;
+            if (bridge->fitness != 100000000)
+            {
+                average_fitness += bridge->fitness;
+                average_deflection += bridge->deflection;
+            }
+            else
+            {
+                ++killed;
+            }
         }
-        average_fitness /= bridges.size();
-        average_deflection /= bridges.size();
+        average_fitness /= (bridges.size() - killed);
+        average_deflection /= (bridges.size() - killed);
 
         best_deflection_gen.push_back(bridges[0]->deflection);
         best_fitness_gen.push_back(bridges[0]->fitness);
@@ -166,7 +174,7 @@ void run_generations(std::vector<std::shared_ptr<Bridge>>& bridges)
         bridge->add_joint(B);
         bridge->add_joint(C);
         bridge->add_joint(D);
-        //bridge->add_joint(E);
+        bridge->add_joint(E);
         bridge->add_joint(F);
         bridge->add_joint(G);
         bridge->add_joint(H);
@@ -176,11 +184,11 @@ void run_generations(std::vector<std::shared_ptr<Bridge>>& bridges)
         bridge->add_member(B, C);
         bridge->add_member(B, D);
         bridge->add_member(C, D);
-        //bridge->add_member(C, E);
-        //bridge->add_member(D, E);
+        bridge->add_member(C, E);
+        bridge->add_member(D, E);
         bridge->add_member(D, F);
         bridge->add_member(D, G);
-        //bridge->add_member(E, F);
+        bridge->add_member(E, F);
         bridge->add_member(F, G);
         bridge->add_member(F, H);
         bridge->add_member(G, H);

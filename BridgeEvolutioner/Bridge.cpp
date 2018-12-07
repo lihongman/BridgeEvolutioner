@@ -360,7 +360,7 @@ long double Bridge::vertical_deflection()
             return -100;
         for (std::shared_ptr<Member> member : members)
         {
-            output += (unit_members1[i] * (member->force/1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
+            output += (unit_members1[i] * (member->force / 1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
             output += (unit_members2[i] * (member->force / 1000) * member->length()) / (MEMBER_AREA * YOUNGS_MODULUS);
             i++;
         }
@@ -373,6 +373,8 @@ long double Bridge::vertical_deflection()
     unit_members2.clear();
 
     deflection = max;
+    if (max == 0)
+        max = 0;
     return max;
 }
 
