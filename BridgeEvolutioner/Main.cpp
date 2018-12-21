@@ -153,7 +153,96 @@ void run_generations(std::vector<std::shared_ptr<Bridge>>& bridges)
             }
         }
     }
-}void run2()
+}
+
+void run3()
+{
+    srand((unsigned int)time(NULL));
+    std::vector<std::shared_ptr<Bridge>> bridges;
+    for (unsigned int i = 0; i < 100; i++)
+    {
+        Joint A = Joint(0, 0);
+        Joint B = Joint(36, 0);
+        Joint C = Joint(36, 23);
+        Joint D = Joint(60, 0);
+        Joint E = Joint(84, 0);
+        Joint F = Joint(84, 30.6875);
+        Joint G = Joint(108, 0);
+        Joint H = Joint(132, 33);
+        Joint I = Joint(132, 0);
+        Joint J = Joint(156, 0);
+        Joint K = Joint(180, 0);
+        Joint L = Joint(180, 30.6875);
+        Joint M = Joint(204, 0);
+        Joint N = Joint(228, 0);
+        Joint O = Joint(228, 23);
+        Joint P = Joint(264, 0);
+
+        std::shared_ptr<Bridge> bridge = std::make_shared<Bridge>();
+
+        bridge->add_joint(A);
+        bridge->add_joint(B);
+        bridge->add_joint(C);
+        bridge->add_joint(D);
+        bridge->add_joint(E);
+        bridge->add_joint(F);
+        bridge->add_joint(G);
+        bridge->add_joint(H);
+        bridge->add_joint(I);
+        bridge->add_joint(J);
+        bridge->add_joint(K);
+        bridge->add_joint(L);
+        bridge->add_joint(M);
+        bridge->add_joint(N);
+        bridge->add_joint(O);
+        bridge->add_joint(P);
+
+        bridge->add_member(A, B);
+        bridge->add_member(B, D);
+        bridge->add_member(D, E);
+        bridge->add_member(E, G);
+        bridge->add_member(G, I);
+        bridge->add_member(I, J);
+        bridge->add_member(J, K);
+        bridge->add_member(K, M);
+        bridge->add_member(M, N);
+        bridge->add_member(N, P);
+        bridge->add_member(A, C);
+        bridge->add_member(B, C);
+        bridge->add_member(D, C);
+        bridge->add_member(D, F);
+        bridge->add_member(E, F);
+        bridge->add_member(G, F);
+        bridge->add_member(G, H);
+        bridge->add_member(I, H);
+        bridge->add_member(J, H);
+        bridge->add_member(J, L);
+        bridge->add_member(K, L);
+        bridge->add_member(M, L);
+        bridge->add_member(M, O);
+        bridge->add_member(N, O);
+        bridge->add_member(P, O);
+        bridge->add_member(C, F);
+        bridge->add_member(F, H);
+        bridge->add_member(H, L);
+        bridge->add_member(L, O);
+
+        bridges.push_back(bridge);
+    }
+
+    run_generations(bridges);
+
+    best_bridge = bridges[0];
+
+    for (unsigned int i = 1; i < bridges.size(); i++)
+    {
+        bridges[i].reset();
+    }
+
+    bridges.clear();
+}
+
+void run2()
 {
     srand((unsigned int)time(NULL));
     std::vector<std::shared_ptr<Bridge>> bridges;
@@ -341,6 +430,9 @@ int main()
     {
     case 2:
         run2();
+        break;
+    case 3:
+        run3();
         break;
     default:
         run1();
